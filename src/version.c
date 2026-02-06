@@ -53,6 +53,11 @@ struct version_info *version_data;
 const char *filename;
 boolean complain;
 {
+#ifdef __EMSCRIPTEN__
+	/* Emscripten: Skip strict version checks - data files may have
+	 * been compiled with slightly different settings */
+	return TRUE;
+#endif
 	if (
 #ifdef VERSION_COMPATIBILITY
 	    version_data->incarnation < VERSION_COMPATIBILITY ||

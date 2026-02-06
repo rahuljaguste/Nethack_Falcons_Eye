@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NetHack - Falcon's Eye</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; width: 100vw; height: 100vh; }
+  canvas { display: block; image-rendering: pixelated; }
+  #status { color: #aaa; text-align: center; padding: 20px; font-family: sans-serif; position: absolute; top: 0; left: 0; right: 0; }
+  #progress { width: 300px; }
+</style>
+</head>
+<body>
+<div id="status">Loading...</div>
+<div><progress hidden id="progress" max="100" value="0"></progress></div>
+<canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+<script>
+var statusElement = document.getElementById("status");
+var progressElement = document.getElementById("progress");
+var canvasElement = document.getElementById("canvas");
+
+canvasElement.addEventListener("webglcontextlost", function(e) {
+  alert("WebGL context lost. You will need to reload the page.");
+  e.preventDefault();
+}, false);
+
+var Module = {
+  print: function() {
+    var text = Array.prototype.slice.call(arguments).join(" ");
+    console.log(text);
+  },
+  canvas: canvasElement,
+  setStatus: function(text) {
+    if (!text) {
+      statusElement.style.display = "none";
+      progressElement.hidden = true;
+      return;
+    }
+    var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+    if (m) {
+      statusElement.innerHTML = m[1];
+      progressElement.value = parseInt(m[2]) * 100;
+      progressElement.max = parseInt(m[4]) * 100;
+      progressElement.hidden = false;
+    } else {
+      statusElement.innerHTML = text;
+      progressElement.hidden = true;
+    }
+  },
+  totalDependencies: 0,
+  monitorRunDependencies: function(left) {
+    this.totalDependencies = Math.max(this.totalDependencies, left);
+    Module.setStatus(left
+      ? "Loading... (" + (this.totalDependencies - left) + "/" + this.totalDependencies + ")"
+      : "All downloads complete.");
+  }
+};
+
+var lastGameW = 0, lastGameH = 0;
+function resizeCanvas() {
+  var w = window.innerWidth;
+  var h = window.innerHeight;
+  var gameW = canvasElement.width;
+  var gameH = canvasElement.height;
+  if (gameW === 0 || gameH === 0) return;
+  lastGameW = gameW;
+  lastGameH = gameH;
+  var scale = Math.min(w / gameW, h / gameH);
+  canvasElement.style.width = Math.floor(gameW * scale) + "px";
+  canvasElement.style.height = Math.floor(gameH * scale) + "px";
+}
+window.addEventListener("resize", resizeCanvas);
+// Poll for canvas resolution changes (game sets it after init)
+setInterval(function() {
+  if (canvasElement.width !== lastGameW || canvasElement.height !== lastGameH) {
+    resizeCanvas();
+  }
+}, 500);
+
+Module.setStatus("Loading...");
+window.onerror = function(event) {
+  // Ignore ResizeObserver loop errors
+  if (typeof event === "string" && event.indexOf("ResizeObserver") !== -1) return;
+  Module.setStatus("Exception thrown, see JavaScript console");
+  Module.setStatus = function(text) {
+    if (text) console.error("[post-exception status] " + text);
+  };
+};
+</script>
+{{{ SCRIPT }}}
+</body>
+</html>

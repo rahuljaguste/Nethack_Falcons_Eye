@@ -11,14 +11,41 @@
 -------------------------------------------------------------------*/
 
 #include <stdlib.h>
+#ifndef __EMSCRIPTEN__
+#if !defined(__APPLE__) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__NetBSD__)
 #include <malloc.h>
+#endif
 #include <unistd.h>
 #include <signal.h>
+#endif
 #include <errno.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_mixer.h>
+
+/* SDL1.2 -> SDL2 compatibility defines */
+#define SDLK_LMETA SDLK_LGUI
+#define SDLK_RMETA SDLK_RGUI
+#define SDLK_LSUPER SDLK_LGUI
+#define SDLK_RSUPER SDLK_RGUI
+#define SDLK_KP0 SDLK_KP_0
+#define SDLK_KP1 SDLK_KP_1
+#define SDLK_KP2 SDLK_KP_2
+#define SDLK_KP3 SDLK_KP_3
+#define SDLK_KP4 SDLK_KP_4
+#define SDLK_KP5 SDLK_KP_5
+#define SDLK_KP6 SDLK_KP_6
+#define SDLK_KP7 SDLK_KP_7
+#define SDLK_KP8 SDLK_KP_8
+#define SDLK_KP9 SDLK_KP_9
+#define KMOD_META KMOD_GUI
+#else
 #include "SDL.h"
 #include "SDL_video.h"
 #include "SDL_audio.h"
 #include "SDL_error.h"
+#endif
 #include "jtp_def.h"
 #include "jtp_gra.h"
 #include "jtp_gen.h"
@@ -80,7 +107,11 @@ int   jtp_sdl_polled_message;         /* The particular message that ended the p
 
 
 /* Graphics objects */
-SDL_Surface * jtp_sdl_screen;          /* Graphics surface */
+SDL_Surface * jtp_sdl_screen;          /* Graphics surface (8-bit paletted) */
+#ifdef __EMSCRIPTEN__
+SDL_Window * jtp_sdl_window;           /* SDL2 window */
+SDL_Surface * jtp_sdl_window_surface;  /* Window surface (for blitting) */
+#endif
 SDL_Color   * jtp_sdl_colors = NULL;   /* Graphics palette */
 
 /* Sound effects objects */
@@ -92,9 +123,13 @@ jtp_sdl_cached_sound * jtp_sdl_cached_sounds;
 int                  jtp_sdl_oldest_cached_sound = 0;
 
 /* Music objects */
+#ifdef __EMSCRIPTEN__
+Mix_Music * jtp_sdl_music = NULL;
+#else
 SDL_CD * jtp_sdl_cdrom = NULL;
 pid_t jtp_sdl_music_player_pid = -1;
 char * jtp_sdl_home_directory = NULL;
+#endif
 
 /*
 MCI_OPEN_PARMS       jtp_dx_mciOpenParms;
@@ -124,6 +159,7 @@ void jtp_SDLWriteLogMessage(int msgtype, char * logmessage)
 }
 
 
+#ifndef __EMSCRIPTEN__
 /* Music player signal handler */
 void jtp_sdl_handle_music_player_signal(int sig_id)
 {
@@ -134,6 +170,7 @@ void jtp_sdl_handle_music_player_signal(int sig_id)
     jtp_sdl_music_player_pid = -1;
   }
 }
+#endif
 
 
 void jtp_SDLFillAudio(void *udata, Uint8 *stream, int len)
@@ -220,8 +257,10 @@ void jtp_SDLProcessEvent
         case SDLK_LMETA:   /* ALT/Meta key is not a separate key */
         case SDLK_RMETA:   /* ALT/Meta key is not a separate key */
         case SDLK_MODE:
-        case SDLK_LSUPER:
-        case SDLK_RSUPER:
+#ifndef __EMSCRIPTEN__
+        case SDLK_LSUPER:  /* Same as SDLK_LGUI in SDL2 */
+        case SDLK_RSUPER:  /* Same as SDLK_RGUI in SDL2 */
+#endif
           break;
         default:
           switch((cur_event->key).keysym.sym)
@@ -230,43 +269,43 @@ void jtp_SDLProcessEvent
             case SDLK_PAUSE: i=JTP_KEY_PAUSE; break;
             case SDLK_ESCAPE: i=27; break;
             case SDLK_SPACE: i=' '; break;
-            case SDLK_EXCLAIM: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_QUOTEDBL: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_HASH: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_DOLLAR: i = (cur_event->key).keysym.unicode; break;
-	    case SDLK_AMPERSAND: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_QUOTE: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_LEFTPAREN: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_RIGHTPAREN: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_ASTERISK: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_PLUS: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_COMMA: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_MINUS: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_PERIOD: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_SLASH: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_0: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_1: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_2: i = (cur_event->key).keysym.unicode; break; 
-            case SDLK_3: i = (cur_event->key).keysym.unicode; break; 
-            case SDLK_4: i = (cur_event->key).keysym.unicode; break; 
-            case SDLK_5: i = (cur_event->key).keysym.unicode; break; 
-            case SDLK_6: i = (cur_event->key).keysym.unicode; break; 
-            case SDLK_7: i = (cur_event->key).keysym.unicode; break; 
-            case SDLK_8: i = (cur_event->key).keysym.unicode; break; 
-            case SDLK_9: i = (cur_event->key).keysym.unicode; break; 
-            case SDLK_COLON: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_SEMICOLON: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_LESS: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_EQUALS: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_GREATER: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_QUESTION: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_AT: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_LEFTBRACKET: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_BACKSLASH: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_RIGHTBRACKET: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_CARET: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_UNDERSCORE: i = (cur_event->key).keysym.unicode; break;
-            case SDLK_BACKQUOTE: i = (cur_event->key).keysym.unicode; break;
+            case SDLK_EXCLAIM: i = (cur_event->key).keysym.sym; break;
+            case SDLK_QUOTEDBL: i = (cur_event->key).keysym.sym; break;
+            case SDLK_HASH: i = (cur_event->key).keysym.sym; break;
+            case SDLK_DOLLAR: i = (cur_event->key).keysym.sym; break;
+	    case SDLK_AMPERSAND: i = (cur_event->key).keysym.sym; break;
+            case SDLK_QUOTE: i = (cur_event->key).keysym.sym; break;
+            case SDLK_LEFTPAREN: i = (cur_event->key).keysym.sym; break;
+            case SDLK_RIGHTPAREN: i = (cur_event->key).keysym.sym; break;
+            case SDLK_ASTERISK: i = (cur_event->key).keysym.sym; break;
+            case SDLK_PLUS: i = (cur_event->key).keysym.sym; break;
+            case SDLK_COMMA: i = (cur_event->key).keysym.sym; break;
+            case SDLK_MINUS: i = (cur_event->key).keysym.sym; break;
+            case SDLK_PERIOD: i = (cur_event->key).keysym.sym; break;
+            case SDLK_SLASH: i = (cur_event->key).keysym.sym; break;
+            case SDLK_0: i = (cur_event->key).keysym.sym; break;
+            case SDLK_1: i = (cur_event->key).keysym.sym; break;
+            case SDLK_2: i = (cur_event->key).keysym.sym; break; 
+            case SDLK_3: i = (cur_event->key).keysym.sym; break; 
+            case SDLK_4: i = (cur_event->key).keysym.sym; break; 
+            case SDLK_5: i = (cur_event->key).keysym.sym; break; 
+            case SDLK_6: i = (cur_event->key).keysym.sym; break; 
+            case SDLK_7: i = (cur_event->key).keysym.sym; break; 
+            case SDLK_8: i = (cur_event->key).keysym.sym; break; 
+            case SDLK_9: i = (cur_event->key).keysym.sym; break; 
+            case SDLK_COLON: i = (cur_event->key).keysym.sym; break;
+            case SDLK_SEMICOLON: i = (cur_event->key).keysym.sym; break;
+            case SDLK_LESS: i = (cur_event->key).keysym.sym; break;
+            case SDLK_EQUALS: i = (cur_event->key).keysym.sym; break;
+            case SDLK_GREATER: i = (cur_event->key).keysym.sym; break;
+            case SDLK_QUESTION: i = (cur_event->key).keysym.sym; break;
+            case SDLK_AT: i = (cur_event->key).keysym.sym; break;
+            case SDLK_LEFTBRACKET: i = (cur_event->key).keysym.sym; break;
+            case SDLK_BACKSLASH: i = (cur_event->key).keysym.sym; break;
+            case SDLK_RIGHTBRACKET: i = (cur_event->key).keysym.sym; break;
+            case SDLK_CARET: i = (cur_event->key).keysym.sym; break;
+            case SDLK_UNDERSCORE: i = (cur_event->key).keysym.sym; break;
+            case SDLK_BACKQUOTE: i = (cur_event->key).keysym.sym; break;
             case SDLK_a: if ((cur_event->key).keysym.mod & KMOD_SHIFT) i='A'; else i='a'; break; 
             case SDLK_b: if ((cur_event->key).keysym.mod & KMOD_SHIFT) i='B'; else i='b'; break; 
             case SDLK_c: if ((cur_event->key).keysym.mod & KMOD_SHIFT) i='C'; else i='c'; break; 
@@ -413,9 +452,15 @@ void jtp_SDLPollForMessage(char waitformessage)
   /* If requested, process messages until a polled one arrives */
   if (waitformessage)
   {
-    while (jtp_sdl_polled_message_arrived == JTP_SDL_POLLED_MESSAGE_NOT_ARRIVED)    
+    while (jtp_sdl_polled_message_arrived == JTP_SDL_POLLED_MESSAGE_NOT_ARRIVED)
+    {
       if (SDL_PollEvent(&cur_event))
-        jtp_SDLProcessEvent(&cur_event);    
+        jtp_SDLProcessEvent(&cur_event);
+#ifdef __EMSCRIPTEN__
+      else
+        emscripten_sleep(10); /* Yield to browser event loop */
+#endif
+    }
   }
   
   /* Clean up */  
@@ -464,7 +509,7 @@ int jtp_SDLGetch()
 {
   int current_key;
   int i;
-  
+
   /* Poll for a key until there's one in the buffer */
   while (jtp_sdl_n_keys_in_buffer == 0)
   {
@@ -474,6 +519,10 @@ int jtp_SDLGetch()
     jtp_SDLPollForMessage(1);
     jtp_sdl_polled_message_arrived = JTP_SDL_NO_MESSAGE_POLLING;
     jtp_sdl_n_polled_messages = 0;
+#ifdef __EMSCRIPTEN__
+    /* Yield to browser to prevent freezing */
+    emscripten_sleep(10);
+#endif
   }
   /* Remove key from buffer */
   current_key = jtp_sdl_key_buffer[0];    
@@ -517,6 +566,40 @@ void jtp_SDLEnterGraphicsMode(jtp_screen_t *newscreen)
 {
   int i;
 
+#ifdef __EMSCRIPTEN__
+  emscripten_log(EM_LOG_CONSOLE, "=== jtp_SDLEnterGraphicsMode starting ===");
+
+  /* Emscripten: Initialize SDL2 without CDROM */
+  if (jtp_play_effects)
+  {
+    emscripten_log(EM_LOG_CONSOLE, "Initializing SDL with video+audio...");
+    if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO) == -1)
+    {
+      jtp_SDLWriteLogMessage(JTP_SDL_LOG_ERROR, "[jtp_sdl.c/jtp_SDLEnterGraphicMode/Check1] ERROR: Could not initialize SDL with video and audio\n");
+      jtp_SDLWriteLogMessage(JTP_SDL_LOG_ERROR, "[SDL Error] ");
+      jtp_SDLWriteLogMessage(JTP_SDL_LOG_ERROR, SDL_GetError());
+      jtp_SDLWriteLogMessage(JTP_SDL_LOG_ERROR, "\n");
+      exit(1);
+    }
+    /* Initialize SDL_mixer for music playback */
+    if (Mix_OpenAudio(22050, MIX_DEFAULT_FORMAT, 2, 1024) == -1)
+    {
+      jtp_SDLWriteLogMessage(JTP_SDL_LOG_ERROR, "[jtp_sdl.c/jtp_SDLEnterGraphicMode] ERROR: Could not initialize SDL_mixer\n");
+    }
+  }
+  else
+  {
+    if (SDL_Init(SDL_INIT_VIDEO) == -1)
+    {
+      jtp_SDLWriteLogMessage(JTP_SDL_LOG_ERROR, "[jtp_sdl.c/jtp_SDLEnterGraphicMode/Check2] ERROR: Could not initialize SDL with video\n");
+      jtp_SDLWriteLogMessage(JTP_SDL_LOG_ERROR, "[SDL Error] ");
+      jtp_SDLWriteLogMessage(JTP_SDL_LOG_ERROR, SDL_GetError());
+      jtp_SDLWriteLogMessage(JTP_SDL_LOG_ERROR, "\n");
+      exit(1);
+    }
+  }
+#else
+  /* Native: Initialize SDL1.2 with CDROM */
   if (jtp_play_effects)
   {
     if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_CDROM) == -1)
@@ -539,18 +622,41 @@ void jtp_SDLEnterGraphicsMode(jtp_screen_t *newscreen)
       exit(1);
     }
   }
+#endif
 
   /* Initialize the event handlers */
   atexit(SDL_Quit);
   /* Filter key, mouse and quit events */
   /*  SDL_SetEventFilter(FilterEvents); */
-  /* Enable key repeat */
-  SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);  
+#ifndef __EMSCRIPTEN__
+  /* Enable key repeat (not needed in SDL2 - automatic) */
+  SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 
   if (jtp_fullscreen)
     jtp_sdl_screen = SDL_SetVideoMode(newscreen->width, newscreen->height, 8, SDL_SWSURFACE | SDL_FULLSCREEN);
   else
     jtp_sdl_screen = SDL_SetVideoMode(newscreen->width, newscreen->height, 8, SDL_SWSURFACE);
+#else
+  /* SDL2/Emscripten: Create window and get 32-bit surface */
+  {
+    Uint32 flags = 0;
+    if (jtp_fullscreen) flags |= SDL_WINDOW_FULLSCREEN;
+    jtp_sdl_window = SDL_CreateWindow("NetHack Falcon's Eye",
+                                      SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+                                      newscreen->width, newscreen->height, flags);
+    if (jtp_sdl_window) {
+      /* Get the window surface (32-bit) - we'll convert palette indices directly */
+      jtp_sdl_window_surface = SDL_GetWindowSurface(jtp_sdl_window);
+      /* Set jtp_sdl_screen to window surface for compatibility checks */
+      jtp_sdl_screen = jtp_sdl_window_surface;
+      emscripten_log(EM_LOG_CONSOLE, "Graphics init: window=%p, surface=%p, bpp=%d",
+                     jtp_sdl_window, jtp_sdl_window_surface,
+                     jtp_sdl_window_surface ? jtp_sdl_window_surface->format->BytesPerPixel : 0);
+    } else {
+      emscripten_log(EM_LOG_CONSOLE, "ERROR: Failed to create SDL window!");
+    }
+  }
+#endif
   if (!jtp_sdl_screen)
   {
     jtp_SDLWriteLogMessage(JTP_SDL_LOG_ERROR, "[jtp_sdl.c/jtp_SDLEnterGraphicMode/Check3] ERROR: Could not initialize video mode\n");
@@ -565,8 +671,21 @@ void jtp_SDLEnterGraphicsMode(jtp_screen_t *newscreen)
 
   jtp_sdl_colors = (SDL_Color *)malloc(256*sizeof(SDL_Color));
 
-  /* Enable Unicode translation. Necessary to match keypresses to characters */
+  /* Initialize palette with grayscale defaults so early renders aren't all black */
+  for (i = 0; i < 256; i++)
+  {
+    jtp_sdl_colors[i].r = i;
+    jtp_sdl_colors[i].g = i;
+    jtp_sdl_colors[i].b = i;
+#ifdef __EMSCRIPTEN__
+    jtp_sdl_colors[i].a = 255;
+#endif
+  }
+
+#ifndef __EMSCRIPTEN__
+  /* Enable Unicode translation. Necessary to match keypresses to characters (SDL1.2 only) */
   SDL_EnableUNICODE(1);
+#endif
 
   if (jtp_play_effects)
   {
@@ -579,30 +698,34 @@ void jtp_SDLEnterGraphicsMode(jtp_screen_t *newscreen)
     jtp_sdl_audio_wanted.userdata = NULL;
 
     /* Open the audio device, forcing the desired format */
-    if ( SDL_OpenAudio(&jtp_sdl_audio_wanted, NULL) < 0 ) 
+    if ( SDL_OpenAudio(&jtp_sdl_audio_wanted, NULL) < 0 )
     {
-      jtp_SDLWriteLogMessage(JTP_SDL_LOG_ERROR, "[jtp_sdl.c/jtp_SDLEnterGraphicMode/Check1] ERROR: Could not initialize SDL audio device\n");
-      jtp_SDLWriteLogMessage(JTP_SDL_LOG_ERROR, "[SDL Error] ");
-      jtp_SDLWriteLogMessage(JTP_SDL_LOG_ERROR, SDL_GetError());
-      jtp_SDLWriteLogMessage(JTP_SDL_LOG_ERROR, "\n");
-      exit(1);
+      jtp_SDLWriteLogMessage(JTP_SDL_LOG_NOTE, "[jtp_sdl.c/jtp_SDLEnterGraphicMode] WARNING: Could not initialize SDL audio device - continuing without sound\n");
+      jtp_SDLWriteLogMessage(JTP_SDL_LOG_NOTE, "[SDL Error] ");
+      jtp_SDLWriteLogMessage(JTP_SDL_LOG_NOTE, SDL_GetError());
+      jtp_SDLWriteLogMessage(JTP_SDL_LOG_NOTE, "\n");
+      jtp_play_effects = 0;  /* Disable sound effects */
     }
-    jtp_sdl_audio_chunk = (Uint8 *)malloc(JTP_SDL_SOUND_BUFFER_SIZE*sizeof(Uint8));
-    jtp_sdl_audio_len = 30000;
-    jtp_sdl_audio_pos = NULL;
-
-    /* Create the sound cache */
-    jtp_sdl_cached_sounds = (jtp_sdl_cached_sound *)malloc(JTP_SDL_MAX_CACHED_SOUNDS*sizeof(jtp_sdl_cached_sound));
-    for (i = 0; i < JTP_SDL_MAX_CACHED_SOUNDS; i++)
+    else
     {
-      jtp_sdl_cached_sounds[i].length = 0;
-      jtp_sdl_cached_sounds[i].samples = NULL;
-      jtp_sdl_cached_sounds[i].filename = NULL;
-    }
+      jtp_sdl_audio_chunk = (Uint8 *)malloc(JTP_SDL_SOUND_BUFFER_SIZE*sizeof(Uint8));
+      jtp_sdl_audio_len = 30000;
+      jtp_sdl_audio_pos = NULL;
 
-    /* SDL_PauseAudio(0); */ /* Start playing sounds */
+      /* Create the sound cache */
+      jtp_sdl_cached_sounds = (jtp_sdl_cached_sound *)malloc(JTP_SDL_MAX_CACHED_SOUNDS*sizeof(jtp_sdl_cached_sound));
+      for (i = 0; i < JTP_SDL_MAX_CACHED_SOUNDS; i++)
+      {
+        jtp_sdl_cached_sounds[i].length = 0;
+        jtp_sdl_cached_sounds[i].samples = NULL;
+        jtp_sdl_cached_sounds[i].filename = NULL;
+      }
+
+      /* SDL_PauseAudio(0); */ /* Start playing sounds */
+    }
   }
 
+#ifndef __EMSCRIPTEN__
   if (jtp_play_music)
   {
     /* Initialize internal midi music library. Not implemented yet. */
@@ -615,36 +738,61 @@ void jtp_SDLEnterGraphicsMode(jtp_screen_t *newscreen)
       jtp_sdl_cdrom = SDL_CDOpen(0);
     }
   }
+#endif
 }
 
-void jtp_SDLExitGraphicsMode()
+void jtp_SDLExitGraphicsMode(jtp_screen_t *screen)
 {
   jtp_SDLStopMusic();
+#ifdef __EMSCRIPTEN__
+  Mix_CloseAudio();
+  /* Window surface is freed automatically when window is destroyed */
+  jtp_sdl_screen = NULL;
+  jtp_sdl_window_surface = NULL;
+  if (jtp_sdl_window) {
+    SDL_DestroyWindow(jtp_sdl_window);
+    jtp_sdl_window = NULL;
+  }
+#else
   if (jtp_sdl_cdrom) SDL_CDClose(jtp_sdl_cdrom);
+#endif
   SDL_Quit();
 }
 
 void jtp_SDLRecordColor(int cindex, int r, int g, int b)
 {
+  static int color_debug = 0;
   jtp_sdl_colors[cindex].r = (r*255)/63;
   jtp_sdl_colors[cindex].g = (g*255)/63;
   jtp_sdl_colors[cindex].b = (b*255)/63;
+#ifdef __EMSCRIPTEN__
+  if (color_debug < 5 && cindex < 10) {
+    emscripten_log(EM_LOG_CONSOLE, "RecordColor[%d] = (%d,%d,%d) -> (%d,%d,%d)", cindex, r, g, b,
+           jtp_sdl_colors[cindex].r, jtp_sdl_colors[cindex].g, jtp_sdl_colors[cindex].b);
+    color_debug++;
+  }
+#endif
 }
 
 void jtp_SDLSetPalette()
 {
+#ifdef __EMSCRIPTEN__
+  /* SDL2/Emscripten: Palette is stored in jtp_sdl_colors array
+   * and used during refresh to convert 8-bit indices to 32-bit RGBA.
+   * No palette setup needed on the 32-bit window surface. */
+#else
   SDL_SetColors(jtp_sdl_screen, jtp_sdl_colors, 0, 256);
+#endif
 }
 
 
 void jtp_SDLRefreshRegion
 (
-  int x1, int y1, 
-  int x2, int y2, 
+  int x1, int y1,
+  int x2, int y2,
   jtp_screen_t *newscreen
 )
 {
-  Uint8 * SDLSurfaceTable;
   int i;
 
   /* Clip edges */
@@ -653,20 +801,91 @@ void jtp_SDLRefreshRegion
   if (x2 >= newscreen->width) x2 = newscreen->width-1;
   if (y2 >= newscreen->height) y2 = newscreen->height-1;
 
-  /* Get the rectangle to access as a table pointer */
-  SDLSurfaceTable = jtp_sdl_screen->pixels + y1*jtp_sdl_screen->pitch + x1;
-
-  /* Plot the selected region */
-  for (i = y1; i <= y2; i++)
+#ifdef __EMSCRIPTEN__
+  /* SDL2/Emscripten: Convert 8-bit palette indices to 32-bit RGBA directly */
   {
-    memcpy(SDLSurfaceTable, newscreen->vpage + x1 + i*newscreen->width, x2-x1+1);
-    SDLSurfaceTable += jtp_sdl_screen->pitch;
+    int j;
+    Uint8 *src;
+    SDL_PixelFormat *fmt;
+    int bpp;
+    static int debug_count = 0;
+
+    if (!jtp_sdl_window_surface) {
+      printf("ERROR: jtp_sdl_window_surface is NULL!\n");
+      return;
+    }
+
+    fmt = jtp_sdl_window_surface->format;
+    bpp = fmt->BytesPerPixel;
+
+    if (debug_count < 3) {
+      Uint8 sample_idx = newscreen->vpage[y1 * newscreen->width + x1];
+      emscripten_log(EM_LOG_CONSOLE, "Surface: bpp=%d, region=(%d,%d)-(%d,%d), pixel[0]=%d, color=(%d,%d,%d)",
+             bpp, x1, y1, x2, y2, sample_idx,
+             jtp_sdl_colors[sample_idx].r, jtp_sdl_colors[sample_idx].g, jtp_sdl_colors[sample_idx].b);
+      debug_count++;
+    }
+
+    if (SDL_MUSTLOCK(jtp_sdl_window_surface))
+      SDL_LockSurface(jtp_sdl_window_surface);
+
+    for (i = y1; i <= y2; i++)
+    {
+      src = newscreen->vpage + x1 + i * newscreen->width;
+
+      if (bpp == 4) {
+        Uint32 *dest = (Uint32 *)((Uint8 *)jtp_sdl_window_surface->pixels +
+                          i * jtp_sdl_window_surface->pitch + x1 * 4);
+        for (j = x1; j <= x2; j++)
+        {
+          Uint8 idx = *src++;
+          *dest++ = SDL_MapRGB(fmt, jtp_sdl_colors[idx].r,
+                               jtp_sdl_colors[idx].g, jtp_sdl_colors[idx].b);
+        }
+      } else if (bpp == 2) {
+        Uint16 *dest = (Uint16 *)((Uint8 *)jtp_sdl_window_surface->pixels +
+                          i * jtp_sdl_window_surface->pitch + x1 * 2);
+        for (j = x1; j <= x2; j++)
+        {
+          Uint8 idx = *src++;
+          *dest++ = (Uint16)SDL_MapRGB(fmt, jtp_sdl_colors[idx].r,
+                               jtp_sdl_colors[idx].g, jtp_sdl_colors[idx].b);
+        }
+      }
+    }
+
+    if (SDL_MUSTLOCK(jtp_sdl_window_surface))
+      SDL_UnlockSurface(jtp_sdl_window_surface);
+
+    /* Update the window */
+    {
+      SDL_Rect rect;
+      rect.x = x1;
+      rect.y = y1;
+      rect.w = x2 - x1 + 1;
+      rect.h = y2 - y1 + 1;
+      SDL_UpdateWindowSurfaceRects(jtp_sdl_window, &rect, 1);
+    }
   }
+#else
+  {
+    Uint8 * SDLSurfaceTable;
+    /* Get the rectangle to access as a table pointer */
+    SDLSurfaceTable = jtp_sdl_screen->pixels + y1*jtp_sdl_screen->pitch + x1;
 
-  if (SDL_MUSTLOCK(jtp_sdl_screen))
-    SDL_UnlockSurface(jtp_sdl_screen);
+    /* Plot the selected region */
+    for (i = y1; i <= y2; i++)
+    {
+      memcpy(SDLSurfaceTable, newscreen->vpage + x1 + i*newscreen->width, x2-x1+1);
+      SDLSurfaceTable += jtp_sdl_screen->pitch;
+    }
 
-  SDL_UpdateRect(jtp_sdl_screen, x1, y1, x2-x1+1, y2-y1+1);
+    if (SDL_MUSTLOCK(jtp_sdl_screen))
+      SDL_UnlockSurface(jtp_sdl_screen);
+
+    SDL_UpdateRect(jtp_sdl_screen, x1, y1, x2-x1+1, y2-y1+1);
+  }
+#endif
 }
 
 void jtp_SDLRefresh(jtp_screen_t * newscreen)
@@ -675,6 +894,35 @@ void jtp_SDLRefresh(jtp_screen_t * newscreen)
 }
 
 
+#ifdef __EMSCRIPTEN__
+/* Emscripten: Use SDL_mixer for music playback */
+void jtp_SDLPlayMusicFile(char * musicfilename)
+{
+  if (!jtp_play_music) return;
+
+  /* Stop any currently playing music */
+  if (jtp_sdl_music)
+  {
+    Mix_HaltMusic();
+    Mix_FreeMusic(jtp_sdl_music);
+    jtp_sdl_music = NULL;
+  }
+
+  /* Load and play the music file */
+  jtp_sdl_music = Mix_LoadMUS(musicfilename);
+  if (jtp_sdl_music)
+  {
+    Mix_PlayMusic(jtp_sdl_music, -1); /* Loop indefinitely */
+  }
+  else
+  {
+    jtp_SDLWriteLogMessage(JTP_SDL_LOG_NOTE, "[jtp_sdl.c/jtp_SDLPlayMusicFile] Could not load music file: ");
+    jtp_SDLWriteLogMessage(JTP_SDL_LOG_NOTE, musicfilename);
+    jtp_SDLWriteLogMessage(JTP_SDL_LOG_NOTE, "\n");
+  }
+}
+#else
+/* Native: Use external player via fork/exec */
 void jtp_SDLPlayExternalMusic(char * playerstring, char * musicfilename)
 {
   char tempbuffer[1024];
@@ -768,7 +1016,7 @@ void jtp_SDLPlayExternalMusic(char * playerstring, char * musicfilename)
         jtp_SDLWriteLogMessage(JTP_SDL_LOG_ERROR, "]\n");
       }
       /* If we got here, something went wrong, so make sure to quit */
-      _exit(1);      
+      _exit(1);
     }
     else /* Something went wrong, so make sure to quit */
     {
@@ -776,24 +1024,38 @@ void jtp_SDLPlayExternalMusic(char * playerstring, char * musicfilename)
     }
   }
 }
+#endif
 
 
 void jtp_SDLPlayMIDISong(char * midifilename)
 {
+#ifdef __EMSCRIPTEN__
+  jtp_SDLPlayMusicFile(midifilename);
+#else
   if (jtp_external_midi_player_command)
     jtp_SDLPlayExternalMusic(jtp_external_midi_player_command, midifilename);
+#endif
 }
 
 
 void jtp_SDLPlayMP3Song(char * mp3filename)
 {
+#ifdef __EMSCRIPTEN__
+  jtp_SDLPlayMusicFile(mp3filename);
+#else
   if (jtp_external_mp3_player_command)
     jtp_SDLPlayExternalMusic(jtp_external_mp3_player_command, mp3filename);
+#endif
 }
 
 
 void jtp_SDLPlayCDTrack(char * cdtrackname)
 {
+#ifdef __EMSCRIPTEN__
+  /* CD playback not supported in browser */
+  (void)cdtrackname;
+  return;
+#else
   int nTrack;
 
   if (!jtp_play_music) return;
@@ -801,13 +1063,13 @@ void jtp_SDLPlayCDTrack(char * cdtrackname)
   /* Parse the track number from the given string */
   nTrack = atoi(cdtrackname);
   if (nTrack < 0)
-  { 
+  {
     jtp_SDLWriteLogMessage(JTP_SDL_LOG_DEBUG, "[jtp_dirx.c/jtp_SDLPlayCDTrack/Debug1]: Invalid track number [");
     jtp_SDLWriteLogMessage(JTP_SDL_LOG_DEBUG, cdtrackname);
     jtp_SDLWriteLogMessage(JTP_SDL_LOG_DEBUG, "]\n");
     return;
   }
- 
+
   if (!jtp_sdl_cdrom)
   {
     jtp_SDLWriteLogMessage(JTP_SDL_LOG_DEBUG, "[jtp_dirx.c/jtp_SDLPlayCDTrack/Debug2]: CDROM not initialized\n");
@@ -821,16 +1083,26 @@ void jtp_SDLPlayCDTrack(char * cdtrackname)
   }
 
   SDL_CDPlayTracks(jtp_sdl_cdrom, nTrack, 0, 1, 0);
+#endif
 }
 
 
 void jtp_SDLStopMusic()
 {
+#ifdef __EMSCRIPTEN__
+  /* Stop SDL_mixer music */
+  if (jtp_sdl_music)
+  {
+    Mix_HaltMusic();
+    Mix_FreeMusic(jtp_sdl_music);
+    jtp_sdl_music = NULL;
+  }
+#else
   /* Stop any external music files (MIDI or MP3) playing */
   if (jtp_sdl_music_player_pid > 0)
   {
     kill(jtp_sdl_music_player_pid, SIGKILL);
-    /* Wait for SIGCHLD */    
+    /* Wait for SIGCHLD */
     while (jtp_sdl_music_player_pid > 0) pause();
     /* jtp_sdl_music_player_pid = -1; */
   }
@@ -841,13 +1113,18 @@ void jtp_SDLStopMusic()
     if (SDL_CDStatus(jtp_sdl_cdrom) == CD_PLAYING)
       SDL_CDStop(jtp_sdl_cdrom);
   }
+#endif
 }
 
 
 int jtp_SDLIsMusicPlaying()
 {
+#ifdef __EMSCRIPTEN__
+  /* Check SDL_mixer music status */
+  return Mix_PlayingMusic();
+#else
   /* Check for external music files (MIDI or MP3) playing */
-  if (jtp_sdl_music_player_pid > 0) 
+  if (jtp_sdl_music_player_pid > 0)
     return(1);
 
   /* Check for CD tracks playing */
@@ -855,10 +1132,11 @@ int jtp_SDLIsMusicPlaying()
   {
     if (SDL_CDStatus(jtp_sdl_cdrom) == CD_PLAYING)
       return(1);
-  }  
+  }
 
   /* No music playing */
   return(0);
+#endif
 }
 
 

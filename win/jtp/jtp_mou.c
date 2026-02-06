@@ -6,6 +6,10 @@
 #define _jtp_mou_c_
 
 #include "jtp_def.h"
+#include <stdlib.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 #ifdef USE_DIRECTX_SYSCALLS
 #include "jtp_dirx.h"
 #endif
@@ -15,6 +19,7 @@
 #ifdef USE_SDL_SYSCALLS
 #include "jtp_sdl.h"
 #endif
+#include "jtp_gen.h"
 #include "jtp_gra.h"
 #include "jtp_mou.h"
 
@@ -105,6 +110,9 @@ void jtp_repeatmouse
                           jtp_oldmx + m_cursor->xmod + m_cursor->graphic[3],
                           jtp_oldmy + m_cursor->ymod + m_cursor->graphic[1]);
     }
+#ifdef __EMSCRIPTEN__
+    emscripten_sleep(10);
+#endif
   }
   while (jtp_mouseb != whenstop);
 
@@ -152,6 +160,9 @@ void jtp_keymouse
                           jtp_oldmx + m_cursor->xmod + m_cursor->graphic[3],
                           jtp_oldmy + m_cursor->ymod + m_cursor->graphic[1]);
     }
+#ifdef __EMSCRIPTEN__
+    emscripten_sleep(10);
+#endif
   }
   while ((jtp_mouseb != whenstop) && (!jtp_kbhit()));
 

@@ -18,7 +18,7 @@ extern "C"
 #endif
 /* Graphics initialization and closing */
 extern void jtp_SDLEnterGraphicsMode(jtp_screen_t *);
-extern void jtp_SDLExitGraphicsMode();
+extern void jtp_SDLExitGraphicsMode(jtp_screen_t *);
 
 /* Palette handling */
 extern void jtp_SDLRecordColor(int, int, int, int);

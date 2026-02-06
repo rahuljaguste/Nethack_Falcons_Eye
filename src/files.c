@@ -877,6 +877,11 @@ const char *filename;
 int whichprefix;
 int retryct;
 {
+#ifdef __EMSCRIPTEN__
+	/* Emscripten doesn't support file locking - always succeed */
+	nesting++;
+	return TRUE;
+#endif
 #if defined(applec) || defined(__MWERKS__)
 # pragma unused(filename, retryct)
 #endif
@@ -989,6 +994,11 @@ const char *filename;
 # pragma unused(filename)
 #endif
 {
+#ifdef __EMSCRIPTEN__
+	/* Emscripten doesn't support file locking */
+	nesting--;
+	return;
+#endif
 	char locknambuf[BUFSZ];
 	const char *lockname;
 

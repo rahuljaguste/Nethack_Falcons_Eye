@@ -28,6 +28,10 @@ void
 gethdate(name)
 	const char *name;
 {
+#ifdef __EMSCRIPTEN__
+	/* On Emscripten, we can't stat the program binary - just return */
+	return;
+#endif
 /* old version - for people short of space
  *
  *	register char *np;

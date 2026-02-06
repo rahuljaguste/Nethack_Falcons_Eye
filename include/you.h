@@ -5,6 +5,7 @@
 #ifndef YOU_H
 #define YOU_H
 
+#include <time.h>
 #include "attrib.h"
 #include "monst.h"
 #ifndef PROP_H

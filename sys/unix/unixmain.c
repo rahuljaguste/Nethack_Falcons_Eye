@@ -10,6 +10,12 @@
 #include <sys/stat.h>
 #include <signal.h>
 #include <pwd.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#define DEBUG_LOG(msg) emscripten_log(EM_LOG_CONSOLE, "MAIN: %s", msg)
+#else
+#define DEBUG_LOG(msg)
+#endif
 #ifndef O_RDONLY
 #include <fcntl.h>
 #endif
@@ -141,8 +147,11 @@ char *argv[];
 	/* printf("DEBUG 11: Initializing window port...\n"); */
 	init_nhwindows(&argc,argv);
 	/* printf("DEBUG 12: Window port initialized.\n"); */
+	DEBUG_LOG("Window port initialized");
 	/* printf("DEBUG 13: Getting exact username...\n"); */
+	DEBUG_LOG("Getting username...");
 	exact_username = whoami();
+	DEBUG_LOG("Got username");
         /* printf("DEBUG 14: Username ready.\n"); */
 #ifdef _M_UNIX
 	init_sco_cons();
@@ -168,7 +177,9 @@ char *argv[];
 		catmore = DEF_PAGER;
 #endif
 #ifdef MAIL
+	DEBUG_LOG("Getting mail status...");
 	getmailstatus();
+	DEBUG_LOG("Mail status done");
 #endif
 #ifdef WIZARD
 	if (wizard)
@@ -179,7 +190,9 @@ char *argv[];
 	if(!*plname || !strncmp(plname, "player", 4)
 		    || !strncmp(plname, "games", 4)) {
 	  /* printf("DEBUG 15c2: Starting Askname...\n"); */
+		DEBUG_LOG("Calling askname()...");
 		askname();
+		DEBUG_LOG("askname() done");
 	} else if (exact_username) {
 		/* guard against user names with hyphens in them */
 		int len = strlen(plname);
@@ -208,7 +221,9 @@ char *argv[];
 		if(!locknum)
 			Sprintf(lock, "%d%s", (int)getuid(), plname);
                 /* printf("DEBUG 15c9: Going to getlock...\n"); */
+		DEBUG_LOG("Calling getlock()...");
 		getlock();
+		DEBUG_LOG("getlock() done");
 		/* printf("DEBUG 15c7: Locks ready.\n"); */
 #ifdef WIZARD
 	} else {
@@ -218,7 +233,9 @@ char *argv[];
 #endif /* WIZARD */
 
         /* printf("DEBUG 15c: Initializing DLB...\n"); */
+	DEBUG_LOG("Calling dlb_init()...");
 	dlb_init();	/* must be before newgame() */
+	DEBUG_LOG("dlb_init() done");
         /* printf("DEBUG 15d: DLB Initialized...\n"); */
       
 	/*
@@ -237,9 +254,13 @@ char *argv[];
 	 *  Initialize the vision system.  This must be before mklev() on a
 	 *  new game or before a level restore on a saved game.
 	 */
+	DEBUG_LOG("Calling vision_init()...");
 	vision_init();
+	DEBUG_LOG("vision_init() done");
         /* printf("DEBUG 16: Displaying game windows...\n"); */
+	DEBUG_LOG("Calling display_gamewindows()...");
 	display_gamewindows();
+	DEBUG_LOG("display_gamewindows() done");
 
 	if ((fd = restore_saved_game()) >= 0) {
 #ifdef WIZARD

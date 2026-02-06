@@ -87,3 +87,36 @@ src/WINTTY.C
 win/share/MONTHIN.TXT
 win/share/OBJTHIN.TXT
 win/share/OTHTHIN.TXT
+
+
+# Build artifacts
+src/nethack
+src/Sysunix
+src/config.h-t
+src/hack.h-t
+dat/quest_levs
+dat/spec_levs
+doc/Guidebook
+util/dgn_comp
+util/lev_comp
+util/makedefs
+util/dgn_lex.c
+util/dgn_yacc.c
+util/lev_lex.c
+util/lev_yacc.c
+
+# Generated Makefiles (created by setup)
+Makefile
+dat/Makefile
+doc/Makefile
+util/Makefile
+
+# Web build output
+build-web/*.o
+build-web/nethack.wasm
+build-web/nethack.js
+build-web/nethack.data
+build-web/nethack.html
+
+# Added by cargo
+/target

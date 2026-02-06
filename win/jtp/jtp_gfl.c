@@ -7,9 +7,11 @@
 
 #include "jtp_def.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "jtp_gra.h"
 #include "jtp_gfl.h"
+#include "jtp_gen.h"
 
 /* PCX file format constants */
 #define JTP_PCX_LOADBUFFERSIZE 10000

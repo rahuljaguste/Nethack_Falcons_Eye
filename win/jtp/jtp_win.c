@@ -7,6 +7,10 @@
 #include <math.h>
 #include <unistd.h>
 #include <string.h>
+#include <ctype.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 #include "jtp_gen.h"
 #include "jtp_gra.h"
 #include "jtp_mou.h"
@@ -30,6 +34,21 @@
 #include "rm.h"
 #include "display.h"
 #include "patchlevel.h"
+#include "extern.h"
+
+/* Forward declarations */
+extern struct permonst * jtp_do_lookat(int, int, char *, char *);
+int jtp_cmap_to_tile(int);
+
+/* bail function for JTP - clean exit */
+static void
+bail(mesg)
+const char *mesg;
+{
+    clearlocks();
+    jtp_exit_nhwindows(mesg);
+    terminate(EXIT_SUCCESS);
+}
 
 /*----------------------------------------------------------------
   Defines (constants)
@@ -1902,9 +1921,12 @@ void jtp_get_mouse_input
       free(m_bg); m_bg = NULL;
     }
     
-    jtp_readmouse(); 
+    jtp_readmouse();
     if ((whenstop >= 0) && (jtp_mouseb == whenstop)) stopmouse = 1;
     else if (jtp_mouseb > 0) stopmouse = 1;
+#ifdef __EMSCRIPTEN__
+    emscripten_sleep(10);
+#endif
   }
   while ((!stopmouse) && (!jtp_kbhit()));
 
@@ -2056,9 +2078,12 @@ int jtp_get_mouse_inventory_input
       free(m_bg); m_bg = NULL;
     }
     
-    jtp_readmouse(); 
+    jtp_readmouse();
     if ((whenstop >= 0) && (jtp_mouseb == whenstop)) stopmouse = 1;
     else if (jtp_mouseb > 0) stopmouse = 1;
+#ifdef __EMSCRIPTEN__
+    emscripten_sleep(10);
+#endif
   }
   while ((!stopmouse) && (!jtp_kbhit()));
 
@@ -5936,12 +5961,15 @@ void jtp_show_intro(char * introscript_name)
     while (cur_clock-start_clock < 5*CLOCKS_PER_SEC)
     {
       cur_clock = clock();
-      if (jtp_kbhit()) 
+      if (jtp_kbhit())
       {
         jtp_getch();
         cur_clock = start_clock + 7*CLOCKS_PER_SEC;
         i = nScenes;
-      }  
+      }
+#ifdef __EMSCRIPTEN__
+      emscripten_sleep(50);
+#endif
     }
 
     /* Erase subtitles */
@@ -6000,7 +6028,7 @@ void jtp_select_player()
 	flags.initrole = pick_role(flags.initrace, flags.initgend, flags.initalign);
 	if (flags.initrole < 0) 
       {
-	  tty_putstr(BASE_WINDOW, 0, "Incompatible role!");
+	  raw_print("Incompatible role!");
 	  flags.initrole = randrole();
 	}
     } 
@@ -7803,7 +7831,9 @@ jtp_read_options
 
         if (soundtype == JTP_EVENT_SOUND_TYPE_WAVE || soundtype == JTP_EVENT_SOUND_TYPE_LONG_WAVE)
         {
+#ifdef USE_DOS_SYSCALLS
           al_sound_load_wave(jtp_event_sounds[jtp_n_event_sounds-1]->filename, &(jtp_event_sounds[jtp_n_event_sounds-1]->index));
+#endif
         }
 
         /*sprintf(tempbuffer, "Mapped [%s] to [%s]\n", (jtp_event_sounds[jtp_n_event_sounds-1])->searchpattern, (jtp_event_sounds[jtp_n_event_sounds-1])->filename);
@@ -7812,7 +7842,9 @@ jtp_read_options
     }
   }
   fclose(f);
+#ifdef USE_DOS_SYSCALLS
   al_sound_load_wave_finish();
+#endif
 }
 
 void
@@ -7822,6 +7854,11 @@ jtp_init_filenames()
   int i;
 
   /* Get starting directory, and save it for reference */
+#ifdef __EMSCRIPTEN__
+  /* Emscripten: Use the preloaded gamedata directory */
+  strcpy(jtp_game_path, "/gamedata/");
+  gplength = strlen(jtp_game_path);
+#else
   getcwd(jtp_game_path, JTP_MAX_FILENAME_LENGTH);
   gplength = strlen(jtp_game_path);
   /* DOS/Windows use backslashed and Linux/Unix/BeOS uses forward slashes */
@@ -7833,6 +7870,7 @@ jtp_init_filenames()
 #endif
   jtp_game_path[gplength+1] = '\0';
   gplength++;
+#endif
 
   /* printf("DEBUG[jtp_win.c/10]: Game directory is [%s]\n", jtp_game_path); */
 
@@ -7992,8 +8030,16 @@ jtp_init_graphics()
   int screen_width, screen_height;
   int wall_display_style;
 
+#ifdef __EMSCRIPTEN__
+  emscripten_log(EM_LOG_CONSOLE, "=== jtp_init_graphics() starting === [v4]");
+#endif
+
   /* jtp_write_log_message("DEBUG[jtp_win.c/1]: Initializing filenames\n"); */
   jtp_init_filenames();
+
+#ifdef __EMSCRIPTEN__
+  emscripten_log(EM_LOG_CONSOLE, "Filenames initialized, reading options...");
+#endif
 
   /* jtp_write_log_message("DEBUG[jtp_win.c/2]: Reading Falcon's Eye options\n"); */
   /* Read options file */
@@ -8005,8 +8051,13 @@ jtp_init_graphics()
                    &wall_display_style);
   if (screen_width < 800) screen_width = 800;
 
+#ifdef __EMSCRIPTEN__
+  emscripten_log(EM_LOG_CONSOLE, "Options read, initializing screen...");
+  emscripten_sleep(0);
+#endif
+
   /* jtp_write_log_message("DEBUG[jtp_win.c/3]: Initializing screen buffer\n"); */
-  /* Initialize screen and calculate some often used coordinates */  
+  /* Initialize screen and calculate some often used coordinates */
   jtp_init_screen(screen_width, screen_height, 8);
   jtp_statusbar_x = (jtp_screen.width-JTP_STATUSBAR_WIDTH)/2;
   jtp_statusbar_y = jtp_screen.height-JTP_STATUSBAR_HEIGHT;
@@ -8014,12 +8065,33 @@ jtp_init_graphics()
   jtp_map_center_y = (jtp_screen.height-JTP_STATUSBAR_HEIGHT)/2;
   printf("."); fflush(stdout);
 
+#ifdef __EMSCRIPTEN__
+  emscripten_log(EM_LOG_CONSOLE, "Loading fonts...");
+  emscripten_sleep(0);
+#endif
+
   /* jtp_write_log_message("DEBUG[jtp_win.c/3]: Initializing fonts\n"); */
   /* Load fonts */
   jtp_fonts = (jtp_font *)calloc(2, sizeof(jtp_font));
+#ifdef __EMSCRIPTEN__
+  emscripten_log(EM_LOG_CONSOLE, "Loading font 1: %s", jtp_filenames[JTP_FILE_FONT_SMALL]);
+#endif
   jtp_load_font(jtp_filenames[JTP_FILE_FONT_SMALL], 0);
+#ifdef __EMSCRIPTEN__
+  emscripten_log(EM_LOG_CONSOLE, "Font 1 loaded. Loading font 2...");
+  emscripten_sleep(0);
+#endif
   jtp_load_font(jtp_filenames[JTP_FILE_FONT_LARGE], 1);
+#ifdef __EMSCRIPTEN__
+  emscripten_log(EM_LOG_CONSOLE, "Font 2 loaded.");
+  emscripten_sleep(0);
+#endif
   printf("."); fflush(stdout);
+
+#ifdef __EMSCRIPTEN__
+  emscripten_log(EM_LOG_CONSOLE, "Loading window style...");
+  emscripten_sleep(0);
+#endif
 
   /* Load window style graphics */
   jtp_load_PCX(0, 0, jtp_filenames[JTP_FILE_WINDOW_STYLE], 1);
@@ -8043,7 +8115,12 @@ jtp_init_graphics()
   jtp_defwin.scroll_indicator = jtp_get_img(1, 127, 17, 154);
   jtp_defwin.direction_arrows = jtp_get_img(242, 1, 576, 134);
   printf("."); fflush(stdout);
-  
+
+#ifdef __EMSCRIPTEN__
+  emscripten_log(EM_LOG_CONSOLE, "Loading status bar and other assets...");
+  emscripten_sleep(0);
+#endif
+
   /* Load status bar */
   jtp_load_PCX(0, 0, jtp_filenames[JTP_FILE_STATUS_BAR], 1);
   jtp_statusbar = jtp_get_img(0, 0, 799, 99);  
@@ -8105,6 +8182,11 @@ jtp_init_graphics()
   jtp_mcursor[JTP_CURSOR_GOBLET] = jtp_get_mcursor(312, 34, 336, 68);
   printf("."); fflush(stdout);
 
+#ifdef __EMSCRIPTEN__
+  emscripten_log(EM_LOG_CONSOLE, "Loading tile graphics (this may take a while)...");
+  emscripten_sleep(0);
+#endif
+
   /* Set message shading */
   for (i = 0; i < JTP_MAX_MESSAGE_COLORS; i++)
     jtp_message_colors[i] = 20 + i/2;
@@ -8125,6 +8207,9 @@ jtp_init_graphics()
   /* jtp_write_log_message("[jtp_win.c/jtp_init_graphics/Debug10] Falcon's Eye window system ready.\n"); */
 
   jtp_clear_screen();  /* Clear the screen buffer */
+#ifdef __EMSCRIPTEN__
+  emscripten_log(EM_LOG_CONSOLE, "Assets loaded, entering graphics mode...");
+#endif
   /* Enter graphics mode */
   jtp_enter_graphics_mode(); 
   jtp_blankpal(0,255); /* Set palette to all black */
@@ -8141,8 +8226,15 @@ jtp_init_graphics()
   jtp_updatepal(0, 255);
   jtp_game_palette_set = 1;
 
+#ifdef __EMSCRIPTEN__
+  emscripten_log(EM_LOG_CONSOLE, "=== jtp_init_graphics() COMPLETE ===");
+  emscripten_log(EM_LOG_CONSOLE, "Palette colors: [1]=(%d,%d,%d), [15]=(%d,%d,%d)",
+                 jtp_colors[1][0], jtp_colors[1][1], jtp_colors[1][2],
+                 jtp_colors[15][0], jtp_colors[15][1], jtp_colors[15][2]);
+#endif
+
 /*
-  jtp_write_log_message("DEBUGMESSAGE window system ready\n");  
+  jtp_write_log_message("DEBUGMESSAGE window system ready\n");
   jtp_messagebox("Falcon's Eye windowing system is active.");
 */
 }

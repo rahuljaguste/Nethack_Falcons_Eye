@@ -4,6 +4,7 @@
 
 #include "hack.h"
 #include "dlb.h"
+#include <ctype.h>
 #ifdef SHORT_FILENAMES
 #include "patchlev.h"
 #else
@@ -13,10 +14,21 @@
 #include "func_tab.h" /* For extended commands list */
 #include "display.h"  /* For identifying glyph types */
 
+#include "jtp_gen.h"
 #include "jtp_keys.h"
 #include "jtp_win.h"
 #include "jtp_gra.h"
 #include "winjtp.h"
+
+/* Forward declarations from jtp_win.c */
+extern void jtp_select_player(void);
+extern char jtp_find_menu_accelerator(char *, char *);
+extern void jtp_view_inventory(void);
+extern void jtp_init_graphics(void);
+extern void jtp_show_wait_cursor(void);
+
+/* Forward declaration from jtp_gfl.c */
+extern void jtp_save_screenshot(char *);
 
 /* Interface definition, for windows.c */
 struct window_procs jtp_procs = {
@@ -1504,12 +1516,12 @@ menu_item **menu_list;
   if (!tempwindow)
   {
     jtp_messagebox("ERROR: Can't find window for menu selection!");
-    return;
-  }  
+    return -1;
+  }
   if (!tempwindow->menu)
-  { 
+  {
     jtp_messagebox("ERROR: Window does not have a menu!");
-    return;
+    return -1;
   }  
 
   tempwindow->menu->selectiontype = how;

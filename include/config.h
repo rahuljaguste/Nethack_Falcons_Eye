@@ -16,6 +16,11 @@
 
 #define UNIX	/* delete if no fork(), exec() available */
 
+#ifdef __EMSCRIPTEN__
+/* Emscripten/WebAssembly build - mark for special handling */
+# define EMSCRIPTEN_BUILD
+#endif
+
 /* #define MSDOS */	/* in case it's not auto-detected */
 
 /* #define OS2 */	/* define for OS/2 */
@@ -42,7 +47,9 @@
  * Define all of those you want supported in your binary.
  * Some combinations make no sense.  See the installation document.
  */
-#define TTY_GRAPHICS	/* good old tty based graphics */
+#ifndef __EMSCRIPTEN__
+#define TTY_GRAPHICS	/* good old tty based graphics (not for Emscripten) */
+#endif
 /* #define X11_GRAPHICS */	/* X11 interface */
 /* #define QT_GRAPHICS */	/* Qt interface */
 /* #define GNOME_GRAPHICS */	/* Gnome interface */
@@ -56,6 +63,9 @@
 # define JTP_GRAPHICS   /* Falcon's Eye isometric graphics interface */
 #endif
 #ifdef __BEOS__
+# define JTP_GRAPHICS   /* Falcon's Eye isometric graphics interface */
+#endif
+#ifdef __EMSCRIPTEN__
 # define JTP_GRAPHICS   /* Falcon's Eye isometric graphics interface */
 #endif
 
@@ -221,6 +231,9 @@
  * If you define HACKDIR, then this will be the default playground;
  * otherwise it will be the current directory.
  */
+# ifdef __EMSCRIPTEN__
+#  define HACKDIR "/gamedata"	/* Emscripten virtual filesystem path */
+# endif
 # ifndef HACKDIR
 #  define HACKDIR "/usr/games/lib/nethackdir"	/* nethack directory */
 # endif

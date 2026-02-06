@@ -11,7 +11,11 @@
 
 #include "jtp_def.h"
 #include <stdio.h>
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
+#endif
 #include <string.h>
 
 void jtp_write_log_message(char * logmessage);

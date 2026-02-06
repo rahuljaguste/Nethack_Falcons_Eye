@@ -6,6 +6,7 @@
 #define _jtp_gen_c_
 
 #include <time.h>
+#include <stdlib.h>
 #ifdef USE_DIRECTX_SYSCALLS
 #include "jtp_dirx.h"
 #endif

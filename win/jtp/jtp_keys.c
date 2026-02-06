@@ -2,7 +2,11 @@
 /* Copyright (c) Jaakko Peltonen, 2001				  */
 /* NetHack may be freely redistributed.  See license for details. */
 
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
+#endif
 #include "hack.h"
 #include "jtp_keys.h"
 

@@ -9,11 +9,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 #ifdef USE_DIRECTX_SYSCALLS
 #include "jtp_dirx.h"
 #endif
 #ifdef USE_DOS_SYSCALLS
 #include "jtp_dos.h"
+#endif
+#ifdef USE_SDL_SYSCALLS
+#include "jtp_sdl.h"
 #endif
 #include "jtp_gen.h"
 #include "jtp_gra.h"
@@ -259,11 +265,14 @@ void jtp_fade_out(double n_secs)
                              (jtp_colors[i][2]*(n_clocks+start_clock-cur_clock))/n_clocks);
       jtp_SDLSetPalette();
       jtp_SDLProcessEvents();
-#endif    
-    }                 
+#endif
+    }
     old_clock = cur_clock;
     cur_clock = clock();
-  }                 
+#ifdef __EMSCRIPTEN__
+    emscripten_sleep(10);
+#endif
+  }
   jtp_blankpal(0,255);
 }
 
@@ -306,7 +315,10 @@ void jtp_fade_in(double n_secs)
     }
     old_clock = cur_clock;
     cur_clock = clock();
-  }   
+#ifdef __EMSCRIPTEN__
+    emscripten_sleep(10);
+#endif
+  }
   jtp_updatepal(0,255);
 }
 
