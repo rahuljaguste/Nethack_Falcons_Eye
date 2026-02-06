@@ -27,11 +27,12 @@ o Interface aids (including autopilot and mouseover identification)
 o Customizable command keys
 o HTML manual 
 
-Falcon's Eye is available for DOS, Windows, Linux/Unix and BeOS 
-systems. The current release adds BeOS support, fixes some bugs, 
-and adds new graphics and features. Please see the Falcon's Eye 
-web site at http://www.hut.fi/~jtpelto2/nethack.html for the 
-latest news about Falcon's Eye.
+Falcon's Eye is available for DOS, Windows, Linux/Unix, BeOS, and
+modern web browsers (via Emscripten/WebAssembly). The current release
+adds browser support, fixes some bugs, and adds new graphics and
+features. Please see the Falcon's Eye web site at
+http://www.hut.fi/~jtpelto2/nethack.html for the latest news about
+Falcon's Eye.
 
 #######################################################################
 DOS Sound support
@@ -46,6 +47,38 @@ How to compile?
 - DJGPP
 - Allegro 4 library (v4.2.3.1 has been tested)
 - Follow the official compilation instructions (sys/msdos/Install.dos)
+
+#######################################################################
+
+#######################################################################
+Browser support (Emscripten/WebAssembly)
+
+Falcon's Eye can now run directly in a web browser via Emscripten.
+The full isometric graphics, sound effects, and mouse-driven interface
+work in modern browsers with no plugins required.
+
+Features:
+- SDL2-based rendering compiled to WebAssembly
+- Async main loop via Emscripten ASYNCIFY
+- Virtual filesystem for game data and save files
+- MIDI music and WAV sound effects via SDL2_mixer
+
+How to build:
+1. Install Emscripten SDK (https://emscripten.org/docs/getting_started/)
+2. Build native first to generate data files:
+     make all
+3. Build for web:
+     cd build-web
+     make -f ../sys/emscripten/Makefile.em
+4. Serve with proper headers (required for SharedArrayBuffer):
+     node build-web/server.js        # Node.js (port 3000)
+     python3 build-web/server.py     # Python  (port 8081)
+5. Open http://localhost:3000 (or 8081) in your browser
+
+Requirements:
+- Emscripten SDK (tested with 3.x)
+- Modern browser with WebAssembly and SharedArrayBuffer support
+  (Chrome, Firefox, Edge, Safari 16.4+)
 
 #######################################################################
 
