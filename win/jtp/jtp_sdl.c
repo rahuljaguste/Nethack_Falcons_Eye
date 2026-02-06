@@ -1030,7 +1030,17 @@ void jtp_SDLPlayExternalMusic(char * playerstring, char * musicfilename)
 void jtp_SDLPlayMIDISong(char * midifilename)
 {
 #ifdef __EMSCRIPTEN__
-  jtp_SDLPlayMusicFile(midifilename);
+  /* MIDI not supported in browser SDL2_mixer; use pre-converted OGG files */
+  {
+    char oggfilename[1024];
+    char * ext;
+    strncpy(oggfilename, midifilename, sizeof(oggfilename) - 1);
+    oggfilename[sizeof(oggfilename) - 1] = '\0';
+    ext = strrchr(oggfilename, '.');
+    if (ext && (!strcmp(ext, ".mid") || !strcmp(ext, ".MID")))
+      strcpy(ext, ".ogg");
+    jtp_SDLPlayMusicFile(oggfilename);
+  }
 #else
   if (jtp_external_midi_player_command)
     jtp_SDLPlayExternalMusic(jtp_external_midi_player_command, midifilename);
