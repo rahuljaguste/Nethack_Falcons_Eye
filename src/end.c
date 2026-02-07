@@ -46,6 +46,11 @@ STATIC_DCL void NDECL(list_genocided);
 
 #if defined(__BEOS__) || defined(MICRO) || defined(WIN32) || defined(OS2)
 extern void FDECL(nethack_exit,(int));
+#elif defined(__EMSCRIPTEN__)
+#include <emscripten.h>
+static void nethack_exit(int status) {
+    emscripten_run_script("location.reload()");
+}
 #else
 #define nethack_exit exit
 #endif
