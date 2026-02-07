@@ -9,12 +9,20 @@
   canvas { display: block; image-rendering: pixelated; }
   #status { color: #aaa; text-align: center; padding: 20px; font-family: sans-serif; position: absolute; top: 0; left: 0; right: 0; }
   #progress { width: 300px; }
+  #fullscreen-btn {
+    position: fixed; bottom: 12px; right: 12px; z-index: 10;
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+    color: #ccc; font: 16px sans-serif; padding: 6px 10px; cursor: pointer;
+    border-radius: 4px; line-height: 1;
+  }
+  #fullscreen-btn:hover { background: rgba(255,255,255,0.3); color: #fff; }
 </style>
 </head>
 <body>
 <div id="status">Loading...</div>
 <div><progress hidden id="progress" max="100" value="0"></progress></div>
 <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+<button id="fullscreen-btn" title="Toggle fullscreen (&#x2318;&#x21E7;F)">&#x26F6;</button>
 <script>
 var statusElement = document.getElementById("status");
 var progressElement = document.getElementById("progress");
@@ -77,6 +85,27 @@ setInterval(function() {
     resizeCanvas();
   }
 }, 500);
+
+// Fullscreen toggle
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+}
+document.getElementById("fullscreen-btn").addEventListener("click", toggleFullscreen);
+document.addEventListener("keydown", function(e) {
+  if (e.key === "F11" || (e.metaKey && e.shiftKey && e.key === "f")) {
+    e.preventDefault(); toggleFullscreen();
+  }
+});
+document.addEventListener("fullscreenchange", function() {
+  var btn = document.getElementById("fullscreen-btn");
+  btn.innerHTML = document.fullscreenElement ? "&#x2716;" : "&#x26F6;";
+  btn.title = document.fullscreenElement ? "Exit fullscreen" : "Toggle fullscreen (\u2318\u21E7F)";
+  resizeCanvas();
+});
 
 Module.setStatus("Loading...");
 window.onerror = function(event) {
