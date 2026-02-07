@@ -232,7 +232,7 @@
  * otherwise it will be the current directory.
  */
 # ifdef __EMSCRIPTEN__
-#  define HACKDIR "/gamedata"	/* Emscripten virtual filesystem path */
+#  define HACKDIR "/nhdata"	/* Emscripten: NetHack data (levels, dungeon, etc.) */
 # endif
 # ifndef HACKDIR
 #  define HACKDIR "/usr/games/lib/nethackdir"	/* nethack directory */

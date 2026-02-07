@@ -474,17 +474,6 @@ boolean wr;
 	    error("Cannot chdir to %s.", dir);
 	}
 
-#ifdef __EMSCRIPTEN__
-	/* Emscripten: NetHack data files (levels, dungeon, etc.) are at /nhdata/
-	 * separate from Falcon's Eye UI data at /gamedata/ to avoid conflicts */
-	fqn_prefix[DATAPREFIX] = "/nhdata/";
-	fqn_prefix[LEVELPREFIX] = "/nhdata/";
-	fqn_prefix[SAVEPREFIX] = "/nhdata/";
-	fqn_prefix[BONESPREFIX] = "/nhdata/";
-	fqn_prefix[LOCKPREFIX] = "/nhdata/";
-	fqn_prefix[SCOREPREFIX] = "/nhdata/";
-#endif
-
 	/* warn the player if we can't write the record file */
 	/* perhaps we should also test whether . is writable */
 	/* unfortunately the access system-call is worthless */
