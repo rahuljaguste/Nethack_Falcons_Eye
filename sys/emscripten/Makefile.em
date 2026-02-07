@@ -29,9 +29,10 @@ FILESYSTEM_FLAGS = -s FORCE_FILESYSTEM=1
 EXPORT_FLAGS = -s EXPORTED_RUNTIME_METHODS=['ccall','cwrap','FS']
 
 # Preload game data files
-# Both Falcon's Eye data (graphics, sound) and NetHack data files (levels, dungeon, etc.)
+# Falcon's Eye data (graphics, sound) and NetHack data files (levels, dungeon, etc.)
+# These MUST be separate paths to avoid filename conflicts (both have config/, defaults.nh, etc.)
 NHDATADIR = ../compiled/games/lib/nethackdir
-PRELOAD_FLAGS = --preload-file $(GAMEDATADIR)@/gamedata --preload-file $(NHDATADIR)@/gamedata
+PRELOAD_FLAGS = --preload-file $(GAMEDATADIR)@/gamedata --preload-file $(NHDATADIR)@/nhdata
 
 # Compiler flags
 CFLAGS = -O2 -DEMSCRIPTEN -I$(INCDIR) -I$(SRCDIR) $(EMFLAGS)
