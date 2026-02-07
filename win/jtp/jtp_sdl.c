@@ -113,6 +113,10 @@ SDL_Window * jtp_sdl_window;           /* SDL2 window */
 SDL_Surface * jtp_sdl_window_surface;  /* Window surface (for blitting) */
 #endif
 SDL_Color   * jtp_sdl_colors = NULL;   /* Graphics palette */
+#ifdef __EMSCRIPTEN__
+static Uint32 jtp_sdl_palette_lut32[256]; /* Pre-mapped 32-bit palette lookup table */
+static Uint16 jtp_sdl_palette_lut16[256]; /* Pre-mapped 16-bit palette lookup table */
+#endif
 
 /* Sound effects objects */
 SDL_AudioSpec jtp_sdl_audio_wanted;    /* Audio specification */
@@ -743,7 +747,28 @@ void jtp_SDLEnterGraphicsMode(jtp_screen_t *newscreen)
 
 void jtp_SDLExitGraphicsMode(jtp_screen_t *screen)
 {
+  int i;
+
   jtp_SDLStopMusic();
+
+  /* Free sound resources */
+  if (jtp_sdl_cached_sounds)
+  {
+    for (i = 0; i < JTP_SDL_MAX_CACHED_SOUNDS; i++)
+    {
+      free(jtp_sdl_cached_sounds[i].filename);
+      free(jtp_sdl_cached_sounds[i].samples);
+    }
+    free(jtp_sdl_cached_sounds);
+    jtp_sdl_cached_sounds = NULL;
+  }
+  free(jtp_sdl_audio_chunk);
+  jtp_sdl_audio_chunk = NULL;
+
+  /* Free palette */
+  free(jtp_sdl_colors);
+  jtp_sdl_colors = NULL;
+
 #ifdef __EMSCRIPTEN__
   Mix_CloseAudio();
   /* Window surface is freed automatically when window is destroyed */
@@ -777,9 +802,21 @@ void jtp_SDLRecordColor(int cindex, int r, int g, int b)
 void jtp_SDLSetPalette()
 {
 #ifdef __EMSCRIPTEN__
-  /* SDL2/Emscripten: Palette is stored in jtp_sdl_colors array
-   * and used during refresh to convert 8-bit indices to 32-bit RGBA.
-   * No palette setup needed on the 32-bit window surface. */
+  /* Rebuild pre-mapped palette lookup table so the refresh loop
+   * can use a simple array index instead of calling SDL_MapRGB()
+   * per pixel (256 calls here vs. up to 480,000 per frame). */
+  if (jtp_sdl_window_surface)
+  {
+    int i;
+    SDL_PixelFormat *fmt = jtp_sdl_window_surface->format;
+    for (i = 0; i < 256; i++)
+    {
+      Uint32 mapped = SDL_MapRGB(fmt, jtp_sdl_colors[i].r,
+                                 jtp_sdl_colors[i].g, jtp_sdl_colors[i].b);
+      jtp_sdl_palette_lut32[i] = mapped;
+      jtp_sdl_palette_lut16[i] = (Uint16)mapped;
+    }
+  }
 #else
   SDL_SetColors(jtp_sdl_screen, jtp_sdl_colors, 0, 256);
 #endif
@@ -838,18 +875,14 @@ void jtp_SDLRefreshRegion
                           i * jtp_sdl_window_surface->pitch + x1 * 4);
         for (j = x1; j <= x2; j++)
         {
-          Uint8 idx = *src++;
-          *dest++ = SDL_MapRGB(fmt, jtp_sdl_colors[idx].r,
-                               jtp_sdl_colors[idx].g, jtp_sdl_colors[idx].b);
+          *dest++ = jtp_sdl_palette_lut32[*src++];
         }
       } else if (bpp == 2) {
         Uint16 *dest = (Uint16 *)((Uint8 *)jtp_sdl_window_surface->pixels +
                           i * jtp_sdl_window_surface->pitch + x1 * 2);
         for (j = x1; j <= x2; j++)
         {
-          Uint8 idx = *src++;
-          *dest++ = (Uint16)SDL_MapRGB(fmt, jtp_sdl_colors[idx].r,
-                               jtp_sdl_colors[idx].g, jtp_sdl_colors[idx].b);
+          *dest++ = jtp_sdl_palette_lut16[*src++];
         }
       }
     }

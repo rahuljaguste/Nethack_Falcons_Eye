@@ -360,7 +360,7 @@ void jtp_rect
   unsigned char cindex
 )
 {
-  int i,j; 
+  int i,j;
   for (i = x1; i <= x2; i++)
   {
     jtp_screen.vpage[y1*jtp_screen.width+i] = cindex;
@@ -383,10 +383,10 @@ void jtp_fill_rect
  int i,j;
  
  if (x1 < jtp_screen.drx1) x1 = jtp_screen.drx1;
- if (y1 < jtp_screen.dry1) y1 = jtp_screen.dry1; 
+ if (y1 < jtp_screen.dry1) y1 = jtp_screen.dry1;
  if (x2 > jtp_screen.drx2) x2 = jtp_screen.drx2;
  if (y2 > jtp_screen.dry2) y2 = jtp_screen.dry2;
- 
+
  for (i = x1; i <= x2; i++)
    for (j = y1; j <= y2; j++)
      jtp_screen.vpage[j*jtp_screen.width+i] = cindex;
@@ -395,15 +395,15 @@ void jtp_fill_rect
 
 void jtp_bres_line
 (
-  int x1, int y1, 
-  int x2, int y2, 
+  int x1, int y1,
+  int x2, int y2,
   unsigned char cindex
 )
 {
   int dx, dy, x, y, tmpplus, endx, endy, p, const1, const2;
- 
+
   dx = abs(x1-x2); dy = abs(y1-y2);
- 
+
   if (dx > dy)
   {
     p = 2*dy-dx; const1 = 2*dy; const2 = 2*(dy-dx);
@@ -656,7 +656,7 @@ void jtp_put_stencil
   if ((x+srcXsize<=jtp_screen.drx1) || (y+srcYsize<=jtp_screen.dry1)) return;
   if (y<jtp_screen.dry1) y1=jtp_screen.dry1-y; else y1=0;
   if (y+srcYsize-1>jtp_screen.dry2) y2=jtp_screen.dry2-y; else y2=srcYsize-1;
-  if (x<jtp_screen.drx1) x1=jtp_screen.drx1-x; else x1=0; 
+  if (x<jtp_screen.drx1) x1=jtp_screen.drx1-x; else x1=0;
   if (x+srcXsize-1>jtp_screen.drx2) x2=jtp_screen.drx2-x; else x2=srcXsize-1;
 
   a+=y1*srcXsize+4;
@@ -680,7 +680,7 @@ void jtp_put_stencil
 */
        if (a[j]) destin[j] = a[j];
      }
-     a += srcXsize;  
+     a += srcXsize;
      destin += dplus;
   }
 }

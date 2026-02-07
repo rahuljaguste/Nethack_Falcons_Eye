@@ -1373,18 +1373,41 @@ void jtp_flood_fill_room
   int ** roomindices
 )
 {
-  int i, j;
+  /* Use iterative approach with a stack to avoid C stack overflow in WASM */
+  static int stack_r[JTP_MAP_HEIGHT * JTP_MAP_WIDTH];
+  static int stack_c[JTP_MAP_HEIGHT * JTP_MAP_WIDTH];
+  int sp = 0;
+  int r, c;
 
   /* Basic case: nothing to do */
   if ((roomindices[row1][col1] < 0) ||
       (roomindices[row1][col1] == roomindex))
     return;
 
-  roomindices[row1][col1] = roomindex;
-  if (col1 > 1) jtp_flood_fill_room(row1, col1-1, roomindex, roomindices);
-  if (row1 > 0) jtp_flood_fill_room(row1-1, col1, roomindex, roomindices);
-  if (col1 < JTP_MAP_WIDTH-1) jtp_flood_fill_room(row1, col1+1, roomindex, roomindices);
-  if (row1 < JTP_MAP_HEIGHT-1) jtp_flood_fill_room(row1+1, col1, roomindex, roomindices);
+  stack_r[sp] = row1;
+  stack_c[sp] = col1;
+  sp++;
+
+  while (sp > 0)
+  {
+    sp--;
+    r = stack_r[sp];
+    c = stack_c[sp];
+
+    if ((roomindices[r][c] < 0) || (roomindices[r][c] == roomindex))
+      continue;
+
+    roomindices[r][c] = roomindex;
+
+    if ((c > 1) && (roomindices[r][c-1] > 0) && (roomindices[r][c-1] != roomindex))
+    { stack_r[sp] = r; stack_c[sp] = c-1; sp++; }
+    if ((r > 0) && (roomindices[r-1][c] > 0) && (roomindices[r-1][c] != roomindex))
+    { stack_r[sp] = r-1; stack_c[sp] = c; sp++; }
+    if ((c < JTP_MAP_WIDTH-1) && (roomindices[r][c+1] > 0) && (roomindices[r][c+1] != roomindex))
+    { stack_r[sp] = r; stack_c[sp] = c+1; sp++; }
+    if ((r < JTP_MAP_HEIGHT-1) && (roomindices[r+1][c] > 0) && (roomindices[r+1][c] != roomindex))
+    { stack_r[sp] = r+1; stack_c[sp] = c; sp++; }
+  }
 }
 
 /* 
@@ -1425,6 +1448,7 @@ void jtp_find_room_indices
           (cur_glyph == CROSSWALL) ||
           (cur_glyph == TUWALL) ||
           (cur_glyph == TDWALL) ||
+          (cur_glyph == TLWALL) ||
           (cur_glyph == TRWALL) ||
           (cur_glyph == DBWALL) ||
           (cur_glyph == SDOOR) ||
@@ -1645,6 +1669,7 @@ unsigned char * jtp_choose_target_tooltip
   if (out_str)
   {
     new_tip = jtp_make_tooltip(out_str);
+    free(out_str);
     return(new_tip);
   }
   return(NULL);
@@ -2815,13 +2840,17 @@ void jtp_put_tile
 
   if ((!a) || (x>jtp_screen.drx2) || (y>jtp_screen.dry2)) return;
 
+  /* Clamp shade to valid range to prevent out-of-bounds access */
+  if (shade < 0) shade = 0;
+  else if (shade >= JTP_MAX_SHADES) shade = JTP_MAX_SHADES - 1;
+
   srcYsize=a[0]*256+a[1];
   srcXsize=a[2]*256+a[3];
 
   if ((x+srcXsize<=jtp_screen.drx1) || (y+srcYsize<=jtp_screen.dry1)) return;
   if (y<jtp_screen.dry1) yalku=jtp_screen.dry1-y; else yalku=0;
   if (y+srcYsize-1>jtp_screen.dry2) yloppu=jtp_screen.dry2-y; else yloppu=srcYsize-1;
-  if (x<jtp_screen.drx1) xalku=jtp_screen.drx1-x; else xalku=0; 
+  if (x<jtp_screen.drx1) xalku=jtp_screen.drx1-x; else xalku=0;
   if (x+srcXsize-1>jtp_screen.drx2) xloppu=jtp_screen.drx2-x; else xloppu=srcXsize-1;
 
   a+=yalku*srcXsize+4;
@@ -3644,7 +3673,7 @@ void jtp_convert_map_objects()
     {
       cur_glyph = jtp_mapglyph_obj[i][j];
       cur_tile = jtp_object_to_tile(cur_glyph);
-      if (cur_tile != JTP_TILE_INVALID)
+      if ((cur_tile != JTP_TILE_INVALID) && (cur_tile >= 0) && (cur_tile < JTP_MAX_TILES))
         jtp_maptile_obj[i][j] = jtp_tiles[cur_tile];
       else jtp_maptile_obj[i][j] = NULL;      
     }
@@ -3659,7 +3688,7 @@ void jtp_convert_map_monsters()
     {
       cur_glyph = jtp_mapglyph_mon[i][j];
       cur_tile = jtp_monster_to_tile(cur_glyph);
-      if (cur_tile != JTP_TILE_INVALID)
+      if ((cur_tile != JTP_TILE_INVALID) && (cur_tile >= 0) && (cur_tile < JTP_MAX_TILES))
         jtp_maptile_mon[i][j] = jtp_tiles[cur_tile];
       else jtp_maptile_mon[i][j] = NULL;      
     }
@@ -3893,7 +3922,10 @@ void jtp_convert_map_cmaps()
 
       if (!iswall)
       {
-        jtp_maptile_cmap[i][j] = jtp_tiles[cur_tile];
+        if ((cur_tile >= 0) && (cur_tile < JTP_MAX_TILES))
+          jtp_maptile_cmap[i][j] = jtp_tiles[cur_tile];
+        else
+          jtp_maptile_cmap[i][j] = NULL;
       }
       else
       {
@@ -4092,10 +4124,10 @@ void jtp_draw_map
        */
       if ((cur_tile = jtp_maptile_wall[i][j].west) != NULL)
         jtp_put_tile(x + cur_tile->xmod, y + cur_tile->ymod,
-                     jtp_map_light[i][j-1], cur_tile->graphic);
+                     (j > 0) ? jtp_map_light[i][j-1] : lightlevel, cur_tile->graphic);
       if ((cur_tile = jtp_maptile_wall[i][j].north) != NULL)
         jtp_put_tile(x + cur_tile->xmod, y + cur_tile->ymod,
-                     jtp_map_light[i-1][j], cur_tile->graphic);
+                     (i > 0) ? jtp_map_light[i-1][j] : lightlevel, cur_tile->graphic);
 
       if ((cur_tile = jtp_maptile_cmap[i][j]) != NULL)
         jtp_put_tile(x + cur_tile->xmod, y + cur_tile->ymod,
@@ -4149,10 +4181,10 @@ void jtp_draw_map
 
       if ((cur_tile = jtp_maptile_wall[i][j].south) != NULL)
         jtp_put_tile(x + cur_tile->xmod, y + cur_tile->ymod,
-                     jtp_map_light[i+1][j], cur_tile->graphic);
+                     (i < JTP_MAP_HEIGHT-1) ? jtp_map_light[i+1][j] : lightlevel, cur_tile->graphic);
       if ((cur_tile = jtp_maptile_wall[i][j].east) != NULL)
         jtp_put_tile(x + cur_tile->xmod, y + cur_tile->ymod,
-                     jtp_map_light[i][j+1], cur_tile->graphic);
+                     (j < JTP_MAP_WIDTH-1) ? jtp_map_light[i][j+1] : lightlevel, cur_tile->graphic);
     }
 
   /* Restore drawing region */
